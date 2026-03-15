@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bowling Scoreboard</title>
+
+<style>
+
+body{
+font-family:system-ui;
+background:#0f172a;
+color:white;
+padding:20px;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+}
+
+h1{
+text-align:center;
+margin-bottom:10px;
+}
+
+.controls{
+display:flex;
+gap:10px;
+justify-content:center;
+margin-bottom:15px;
+}
+
+input,button{
+padding:8px;
+border-radius:6px;
+border:none;
+font-size:14px;
+}
+
+button{
+background:#3b82f6;
+color:white;
+cursor:pointer;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+table-layout:fixed;
+}
+
+th{
+background:#1e293b;
+padding:8px;
+}
+
+td{
+border:1px solid #334155;
+padding:4px;
+text-align:center;
+transition:0.2s;
+}
+
+.activeFrame{
+background:#1e293b;
+box-shadow:0 0 8px #22c55e;
+}
+
+.player{
+font-weight:bold;
+width:120px;
+}
+
+.roll{
+width:32px;
+height:36px;
+background:#020617;
+color:white;
+border:1px solid #334155;
+border-radius:6px;
+text-align:center;
+font-weight:700;
+font-size:18px;
+}
+
+.score{
+font-size:16px;
+color:#22c55e;
+font-weight:700;
+min-height:20px;
+}
+
+.total{
+font-weight:700;
+font-size:20px;
+color:#22c55e;
+}
+
+.frameButtons{
+margin-top:4px;
+display:flex;
+gap:4px;
+justify-content:center;
+}
+
+.smallBtn{
+padding:2px 6px;
+font-size:12px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🎳 Bowling Scoreboard</h1>
+
+<div class="controls">
+<input id="playerName" placeholder="Player name">
+<button onclick="addPlayer()">Add Player</button>
+</div>
+
+<table>
+
+<thead>
+<tr>
+<th>Player</th>
+
+<script>
+for(let i=1;i<=10;i++) document.write(`<th>${i}</th>`)
+document.write("<th>Total</th>")
+</script>
+
+</tr>
+</thead>
+
+<tbody id="players"></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+let players=[]
+
+function addPlayer(){
+
+const name=document.getElementById("playerName").value.trim()
+if(!name)return
+
+let frames=[]
+for(let i=0;i<10;i++)frames.push(["","",""])
+
+players.push({name,frames})
+
+document.getElementById("playerName").value=""
+
+render()
+
+}
+
+function render(){
+
+const body=document.getElementById("players")
+body.innerHTML=""
+
+players.forEach((p,pi)=>{
+
+let row=document.createElement("tr")
+
+row.innerHTML=`<td class="player">${p.name}</td>`
+
+p.frames.forEach((frame,fi)=>{
+
+let td=document.createElement("td")
+
+td.id=`frame-${pi}-${fi}`
+
+let rolls=fi===9?3:2
+
+let html=""
+
+for(let r=0;r<rolls;r++){
+
+html+=`
+<input class="roll"
+id="roll-${pi}-${fi}-${r}"
+value="${display(frame,r)}"
+oninput="update(${pi},${fi},${r},this)">
+`
+
+}
+
+if(fi<9){
+html+=`
+<div class="frameButtons">
+<button class="smallBtn" onclick="setStrike(${pi},${fi})">X</button>
+<button class="smallBtn" onclick="setSpare(${pi},${fi})">/</button>
+</div>
+`
+}
+
+html+=`<div class="score" id="score-${pi}-${fi}"></div>`
+
+td.innerHTML=html
+row.appendChild(td)
+
+})
+
+row.innerHTML+=`<td class="total" id="total-${pi}"></td>`
+
+body.appendChild(row)
+
+})
+
+calculate()
+highlightFrame()
+
+}
+
+function display(frame,i){
+
+if(frame[i]==="X")return"X"
+if(frame[i]==="/")return"/"
+
+return frame[i]||""
+
+}
+
+function update(player,frame,roll,input){
+
+let v=parseInt(input.value)
+
+if(!isNaN(v)){
+players[player].frames[frame][roll]=v
+}else{
+players[player].frames[frame][roll]=""
+}
+
+autoMove(player,frame,roll)
+
+calculate()
+highlightFrame()
+
+}
+
+function autoMove(player,frame,roll){
+
+let next=document.getElementById(`roll-${player}-${frame}-${roll+1}`)
+
+if(next){
+next.focus()
+return
+}
+
+let nextFrame=document.getElementById(`roll-${player}-${frame+1}-0`)
+
+if(nextFrame){
+nextFrame.focus()
+}
+
+}
+
+function setStrike(player,frame){
+
+players[player].frames[frame][0]="X"
+players[player].frames[frame][1]=""
+
+render()
+
+}
+
+function setSpare(player,frame){
+
+let first=players[player].frames[frame][0]
+
+if(first==="")return
+
+players[player].frames[frame][1]="/"
+
+render()
+
+}
+
+function highlightFrame(){
+
+document.querySelectorAll("td").forEach(td=>td.classList.remove("activeFrame"))
+
+players.forEach((p,pi)=>{
+
+for(let f=0;f<10;f++){
+
+let frame=p.frames[f]
+
+if(frame[0]==="" || (frame[1]==="" && frame[0]!=="X")){
+
+let cell=document.getElementById(`frame-${pi}-${f}`)
+
+if(cell) cell.classList.add("activeFrame")
+
+break
+
+}
+
+}
+
+})
+
+}
+
+function calculate(){
+
+players.forEach((p,pi)=>{
+
+let rolls=[]
+
+p.frames.forEach((f,i)=>{
+
+let r1=f[0]
+let r2=f[1]
+let r3=f[2]
+
+if(r1==="X")rolls.push(10)
+else if(!isNaN(r1))rolls.push(parseInt(r1))
+
+if(i<9){
+
+if(r1!=="X"){
+if(r2==="/")rolls.push(10-(parseInt(r1)||0))
+else if(!isNaN(r2))rolls.push(parseInt(r2))
+}
+
+}else{
+
+if(r2==="/")rolls.push(10-(parseInt(r1)||0))
+else if(!isNaN(r2))rolls.push(parseInt(r2))
+
+if(r3==="X")rolls.push(10)
+else if(!isNaN(r3))rolls.push(parseInt(r3))
+
+}
+
+})
+
+let score=0
+let rollIndex=0
+
+for(let frame=0;frame<10;frame++){
+
+let frameScore=null
+
+if(rolls[rollIndex]===10){
+
+if(rolls[rollIndex+1]!=null && rolls[rollIndex+2]!=null){
+frameScore=10+rolls[rollIndex+1]+rolls[rollIndex+2]
+}
+
+rollIndex+=1
+
+}
+
+else if(
+rolls[rollIndex]!=null &&
+rolls[rollIndex+1]!=null &&
+rolls[rollIndex]+rolls[rollIndex+1]===10
+){
+
+if(rolls[rollIndex+2]!=null){
+frameScore=10+rolls[rollIndex+2]
+}
+
+rollIndex+=2
+
+}
+
+else if(
+rolls[rollIndex]!=null &&
+rolls[rollIndex+1]!=null
+){
+
+frameScore=rolls[rollIndex]+rolls[rollIndex+1]
+
+rollIndex+=2
+
+}
+
+if(frameScore!=null){
+
+score+=frameScore
+document.getElementById(`score-${pi}-${frame}`).innerText=score
+
+}else{
+
+document.getElementById(`score-${pi}-${frame}`).innerText=""
+
+}
+
+}
+
+document.getElementById(`total-${pi}`).innerText = isNaN(score) ? "" : score
+
+})
+
+}
+
+</script>
+
+</body>
+</html>
